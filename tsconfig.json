@@ -1,0 +1,11 @@
+{
+  "include": [
+    "app.ts"
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "NodeNext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  }
+}
