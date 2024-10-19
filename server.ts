@@ -1,5 +1,6 @@
 import app from './app';
 import dotenv from 'dotenv';
+import connectionToDatabase from './connection/mongoose';
 
 dotenv.config({ path: './config.env' });
 console.log(
@@ -8,6 +9,8 @@ console.log(
     '\x1b[32m',
     process.env.NODE_ENV,
 );
+
+connectionToDatabase();
 
 const port: number = Number(process.env.PORT);
 
