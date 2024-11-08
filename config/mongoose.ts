@@ -7,12 +7,16 @@ const connectionToDatabase = async () => {
     );
 
     try {
-        await mongoose.connect(DB!, {}).then(() => {
-            console.log(
-                '\x1b[32m',
-                'You have successfully connected to the MongoDB database',
-            );
-        });
+        await mongoose
+            .connect(DB!, {
+                dbName: 'natours',
+            })
+            .then(() => {
+                console.log(
+                    '\x1b[32m',
+                    'You have successfully connected to the MongoDB database',
+                );
+            });
     } catch (error) {
         console.error('\x1b[31m', error);
     }

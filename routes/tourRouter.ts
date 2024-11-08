@@ -5,13 +5,19 @@ import {
     getAllTours,
     getTourById,
     updateTour,
+} from '../controllers/tourController';
+
+import {
     checkId,
     checkBody,
-} from '../controllers/tourController';
+    aliasTopTours,
+} from '../middlewares/tour.middleware';
 
 const router = express.Router();
 
 router.param('id', checkId);
+
+router.route('/top-5-cheap').get(aliasTopTours, getAllTours);
 
 router.route('/').get(getAllTours).post(checkBody, createNewTour);
 

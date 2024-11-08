@@ -1,140 +1,117 @@
-import { NextFunction, Request, Response } from 'express';
-import fs from 'node:fs';
+import { query, Request, Response } from 'express';
+import Tour from '../Models/tour.model';
+import APIFeatures from '../utils/apiFeatures';
 
-const tours: any[] = JSON.parse(
-    fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`, 'utf8')
-);
+export const getAllTours = async (req: Request, res: Response) => {
+    try {
+        // * Execute Query
+        const features = new APIFeatures(Tour.find(), req.query as any)
+            .filter()
+            .sort()
+            .limitFields()
+            .paginate();
 
-export const checkId = (req: Request, res: Response, next: NextFunction) => {
-    if (+req.params.id > tours.length) {
-        res.status(404).json({
-            status: 'fail',
-            message: 'Invalid Id',
-        });
-    } else {
-        next();
-    }
-};
-
-// * Create a check body middleware
-// * Check if body contains the name and price property
-// * If not, send back 404(bad request)
-// * Add it to the post handler stack
-
-export const checkBody = (req: Request, res: Response, next: NextFunction) => {
-    if (!req.body.name || !req.body.price) {
-        res.status(404).json({
-            status: 'bad request',
-            message: 'Name and price must not be empty',
-        });
-    } else {
-        next();
-    }
-};
-
-export const getAllTours = (req: Request, res: Response) => {
-    res.status(200).json({
-        status: 'successfully',
-        result: tours.length,
-        data: {
-            tours,
-        },
-    });
-};
-
-export const createNewTour = (req: Request, res: Response) => {
-    const newId = tours[tours.length - 1].id + 1;
-    const newTour = Object.assign({ id: newId }, req.body);
-
-    tours.push(newTour);
-
-    fs.writeFile(
-        `${__dirname}/dev-data/data/tours-simple.json`,
-        JSON.stringify(tours),
-        (err: NodeJS.ErrnoException | null) => {
-            if (err) {
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'Failed to write the file',
-                });
-            }
-            res.status(201).json({
-                status: 'success',
-                data: {
-                    tours: newTour,
-                },
-            });
-        }
-    );
-};
-
-export const getTourById = (req: Request, res: Response) => {
-    const { id } = req.params;
-    const tour = tours.find((item) => item.id === +id);
-    if (!tour) {
-        res.status(404).json({ status: 'Not Found' });
-    } else {
-        res.status(200).json(tour);
-    }
-};
-
-export const updateTour = (req: Request, res: Response) => {
-    const id = +req.params.id;
-    const newTour = req.body;
-
-    if (id > tours.length) {
-        res.status(404).json({
-            status: 'Not Found',
-            message: 'Invalid ID',
-        });
-    } else {
-        const updateTours: any = tours.map((tour) =>
-            tour.id === id ? { ...tour, ...newTour } : tour
-        );
-
-        fs.writeFile(
-            `${__dirname}/dev-data/data/tours-simple.json`,
-            JSON.stringify(updateTours),
-            (err: NodeJS.ErrnoException | null) => {
-                if (err) {
-                    return res.status(500).json({
-                        status: 'error',
-                        message: 'Failed to write the file',
-                    });
-                }
-            }
-        );
+        const tours = await features.query;
 
         res.status(200).json({
             status: 'success',
-            data: {
-                tour: newTour,
-            },
+            result: tours.length,
+            data: { tours },
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'An internal server error occurred: ' + error,
         });
     }
 };
 
-export const deleteTour = (req: Request, res: Response) => {
-    const id: number = +req.params.id;
-    const finalResult = tours.filter((item) => item.id !== id);
+export const createNewTour = async (req: Request, res: Response) => {
+    try {
+        const newTour = await Tour.create(req.body);
+        res.status(201).json({
+            status: 'success',
+            data: { tours: newTour },
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: 'Invalid data provided: ' + error,
+        });
+    }
+};
 
-    fs.writeFile(
-        `${__dirname}/dev-data/data/tours-simple.json`,
-        JSON.stringify(finalResult),
-        (err: NodeJS.ErrnoException | null) => {
-            if (err) {
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'Failed to write the file',
-                });
-            }
+export const getTourById = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const tourById = await Tour.findById(id);
+
+        if (!tourById) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Resource with the specified ID not found',
+            });
         }
-    );
 
-    res.status(200).json({
-        status: 'success',
-        data: {
-            tour: finalResult,
-        },
-    });
+        res.status(200).json({
+            status: 'success',
+            data: { tour: tourById },
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'An internal server error occurred: ' + error,
+        });
+    }
+};
+
+export const updateTour = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const updatedTour = await Tour.findByIdAndUpdate(id, req.body, {
+            new: true,
+            runValidators: true,
+        });
+
+        if (!updatedTour) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Resource with the specified ID not found',
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { tour: updatedTour },
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: 'Invalid update data: ' + error,
+        });
+    }
+};
+
+export const deleteTour = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const deletedTour = await Tour.findByIdAndDelete(id);
+
+        if (!deletedTour) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Resource with the specified ID not found',
+            });
+        }
+
+        res.status(204).json({
+            status: 'success',
+            data: null,
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'An internal server error occurred: ' + error,
+        });
+    }
 };

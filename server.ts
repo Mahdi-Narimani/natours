@@ -1,6 +1,6 @@
 import app from './app';
 import dotenv from 'dotenv';
-import connectionToDatabase from './connection/mongoose';
+import connectionToDatabase from './config/mongoose';
 
 dotenv.config({ path: './config.env' });
 console.log(
