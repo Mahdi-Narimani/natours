@@ -1,4 +1,4 @@
-import { query, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import Tour from '../Models/tour.model';
 import APIFeatures from '../utils/apiFeatures';
 
@@ -28,7 +28,8 @@ export const getAllTours = async (req: Request, res: Response) => {
 
 export const createNewTour = async (req: Request, res: Response) => {
     try {
-        const newTour = await Tour.create(req.body);
+        const newTour = req.body;
+        await Tour.create(newTour);
         res.status(201).json({
             status: 'success',
             data: { tours: newTour },
@@ -107,6 +108,86 @@ export const deleteTour = async (req: Request, res: Response) => {
         res.status(204).json({
             status: 'success',
             data: null,
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'An internal server error occurred: ' + error,
+        });
+    }
+};
+
+export const getTourStats = async (req: Request, res: Response) => {
+    try {
+        const stats = await Tour.aggregate([
+            { $match: { ratingsAverage: { $gte: 4.5 } } },
+            {
+                $group: {
+                    _id: { $toUpper: '$difficulty' },
+                    numTours: { $sum: 1 },
+                    numRating: { $sum: '$ratingsQuantity' },
+                    avgRating: { $avg: '$ratingsAverage' },
+                    avgPrice: { $avg: '$price' },
+                    minPrice: { $min: '$price' },
+                    maxPrice: { $max: '$price' },
+                },
+            },
+            {
+                $sort: { avgPrice: 1 },
+            },
+        ]);
+
+        res.status(200).json({
+            status: 'success',
+            result: stats.length,
+            data: { stats },
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'An internal server error occurred: ' + error,
+        });
+    }
+};
+
+export const getMonthlyPlan = async (req: Request, res: Response) => {
+    try {
+        const { year } = req.params;
+
+        const plan = await Tour.aggregate([
+            { $unwind: '$startDates' },
+            {
+                $match: {
+                    startDates: {
+                        $gte: new Date(`${year}-01-01`),
+                        $lte: new Date(`${year}-12-31`),
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: { $month: '$startDates' },
+                    numToursStart: { $sum: 1 },
+                    tours: { $push: '$name' },
+                },
+            },
+            {
+                $addFields: { month: '$_id' },
+            },
+            {
+                $project: {
+                    _id: 0,
+                },
+            },
+            {
+                $sort: { numToursStart: 1 },
+            },
+        ]);
+
+        res.status(200).json({
+            status: 'success',
+            result: plan.length,
+            data: { plan },
         });
     } catch (error) {
         res.status(500).json({

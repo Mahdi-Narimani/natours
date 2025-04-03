@@ -4,9 +4,12 @@ import {
     getAllUser,
     getUserById,
     updateUser,
-} from '../controllers/userController';
+} from '../controllers/user.controller';
+import { signup } from '../controllers/authentication/auth.controller';
 
 const router = express.Router();
+
+router.post('/signup', signup);
 
 router.route('/').get(getAllUser).post();
 
